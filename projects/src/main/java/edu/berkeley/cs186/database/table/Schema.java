@@ -44,7 +44,28 @@ public class Schema {
    */
   public Record verify(List<DataBox> values) throws SchemaException {
     // TODO: implement me!
-    return null;
+    int num = this.fields.size();
+    boolean indicator = (values.size() == num);
+
+    if (!indicator) {
+      throw new SchemaException("Size of DataBoxes does not match size of this schema");
+    }
+
+    for (int i = 0; i < num; i++) {
+      DataBox a = values.get(i);
+      DataBox b = this.fieldTypes.get(i);
+
+      if (a.type() != b.type() || a.getSize() != b.getSize()) {
+        indicator = false;
+        break;
+      }
+    }
+
+    if (!indicator) {
+      throw new SchemaException("List of DataBoxes does not correspond to fields of this schema");
+    }
+
+    return new Record(values);
   }
 
   /**
@@ -58,7 +79,24 @@ public class Schema {
    */
   public byte[] encode(Record record) {
     // TODO: implement me!
-    return null;
+    List<DataBox> values = record.getValues();
+    byte[] code = new byte[this.size];
+    int num = this.fieldTypes.size();
+    int byteIndex = 0;
+
+    for (int i = 0; i < num; i++) {
+
+      DataBox box = values.get(i);
+      int boxSize = box.getSize();
+      byte[] boxBytes = box.getBytes();
+
+      for (int j = 0; j < boxSize; j++) {
+        code[byteIndex + j] = boxBytes[j];
+      }
+
+      byteIndex += boxSize;
+    }
+    return code;
   }
 
   /**
@@ -70,7 +108,44 @@ public class Schema {
    */
   public Record decode(byte[] input) {
     // TODO: implement me!
-    return null;
+    int num = this.fieldTypes.size();
+    List<DataBox> values = new ArrayList<DataBox>();
+    int byteIndex = 0;
+
+    for (int i = 0; i < num; i++) {
+      DataBox sampleBox = this.fieldTypes.get(i);
+      int boxSize = sampleBox.getSize();
+      byte[] boxByte = new byte[boxSize];
+
+      for (int j = 0; j < boxSize; j++) {
+        boxByte[j] = input[j + byteIndex];
+      }
+
+      if (sampleBox.type().equals(DataBox.Types.BOOL)) {
+
+        BoolDataBox box = new BoolDataBox(boxByte);
+        values.add(box);
+
+      } else if (sampleBox.type().equals(DataBox.Types.FLOAT)) {
+
+        FloatDataBox box = new FloatDataBox(boxByte);
+        values.add(box);
+
+      } else if (sampleBox.type().equals(DataBox.Types.INT)) {
+
+        IntDataBox box = new IntDataBox(boxByte);
+        values.add(box);
+
+      } else {
+
+        StringDataBox box = new StringDataBox(boxByte);
+        values.add(box);
+
+      }
+
+      byteIndex += boxSize;
+    }
+    return new Record(values);
   }
 
   public int getEntrySize() {
