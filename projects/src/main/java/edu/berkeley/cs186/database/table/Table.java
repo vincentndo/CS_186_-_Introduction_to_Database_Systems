@@ -316,6 +316,8 @@ public class Table implements Iterable<Record>, Closeable {
     return old_record;
   }
 
+  public long getNumRecords() { return this.numRecords; }
+
   public int getNumEntriesPerPage() {
     return this.numEntriesPerPage;
   }

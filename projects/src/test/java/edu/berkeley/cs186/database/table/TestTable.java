@@ -391,4 +391,284 @@ public class TestTable {
     assertFalse(iRec.hasNext());
   }
 
+  /* Test updateRecord */
+  @Test
+  @Category(StudentTest.class)
+  public void testS1() throws DatabaseException {
+    Record input = TestUtils.createRecordWithAllTypes();
+    RecordID rid = table.addRecord(input.getValues());
+
+    assertEquals(1, rid.getPageNum());
+    assertEquals(0, rid.getEntryNumber());
+
+    Record new_input = TestUtils.createRecordWithAllTypesWithValue(5);
+
+    table.updateRecord(new_input.getValues(), rid);
+
+    assertEquals(5, table.getRecord(rid).getValues().get(1).getInt());
+    assertEquals("00005", table.getRecord(rid).getValues().get(2).getString());
+  }
+
+  /* Test addRecord and updateRecord */
+  @Test
+  @Category(StudentTest.class)
+  public void testS2() throws DatabaseException {
+    Record input = TestUtils.createRecordWithAllTypes();
+
+    List<RecordID> idList = new ArrayList<RecordID>();
+    for (int i = 0; i < 1000; i ++) {
+      idList.add(table.addRecord(input.getValues()));
+    }
+
+    assertEquals(1000, idList.size());
+    Record new_input = TestUtils.createRecordWithAllTypesWithValue(5);
+    for (int i = 1; i < 1000; i += 2) {
+      table.updateRecord(new_input.getValues(), idList.get(i));
+    }
+
+    for (int i = 0; i < 1000; i +=2) {
+      if (i % 2 == 0) {
+        assertEquals(1, table.getRecord(idList.get(i)).getValues().get(1).getInt());
+        assertEquals("abcde", table.getRecord(idList.get(i)).getValues().get(2).getString());
+      } else {
+        assertEquals(5, table.getRecord(idList.get(i)).getValues().get(1).getInt());
+        assertEquals("00005", table.getRecord(idList.get(i)).getValues().get(2).getString());
+      }
+    }
+  }
+
+  /* Test addRecord, delete and addRecord */
+  @Test
+  @Category(StudentTest.class)
+  public void testS3() throws DatabaseException {
+    Record input = TestUtils.createRecordWithAllTypes();
+
+    List<RecordID> idList = new ArrayList<RecordID>();
+    for (int i = 0; i < 1000; i ++) {
+      idList.add(table.addRecord(input.getValues()));
+    }
+
+    for (int i = 1; i < 1000; i += 2) {
+      table.deleteRecord(idList.get(i));
+    }
+
+    Record new_input = TestUtils.createRecordWithAllTypesWithValue(5);
+    table.addRecord(new_input.getValues());
+
+    assertEquals(5, table.getRecord(idList.get(1)).getValues().get(1).getInt());
+    assertEquals("00005", table.getRecord(idList.get(1)).getValues().get(2).getString());
+  }
+
+  /* Test pageNum*/
+  @Test
+  @Category(StudentTest.class)
+  public void testS4() throws DatabaseException {
+    Record input = TestUtils.createRecordWithAllTypes();
+
+    List<RecordID> idList = new ArrayList<RecordID>();
+    for (int i = 0; i < 1000; i ++) {
+      idList.add(table.addRecord(input.getValues()));
+    }
+
+    assertEquals(1, idList.get(287).getPageNum());
+    assertEquals(2, idList.get(288).getPageNum());
+    assertEquals(2, idList.get(287 + 288).getPageNum());
+    assertEquals(3, idList.get(2*288).getPageNum());
+    assertEquals(3, idList.get(287 + 2*288).getPageNum());
+    assertEquals(4, idList.get(3*288).getPageNum());
+    assertEquals((int) (1000 / table.getNumEntriesPerPage() + 1), idList.get(999).getPageNum());
+  }
+
+  /* Test addRecord comprehensively */
+  @Test
+  @Category(StudentTest.class)
+  public void testS5() throws DatabaseException {
+    Record input = TestUtils.createRecordWithAllTypes();
+
+    List<RecordID> idList = new ArrayList<RecordID>();
+    for (int i = 0; i < 1000; i ++) {
+      idList.add(table.addRecord(input.getValues()));
+    }
+
+    for (int i = 1; i < 1000; i += 2) {
+      table.deleteRecord(idList.get(i));
+    }
+
+    Record new_input = TestUtils.createRecordWithAllTypesWithValue(5);
+    for (int i = 0; i < 500; i++) {
+      table.addRecord(new_input.getValues());
+    }
+
+    for (int i = 0; i < 1000; i++) {
+      if (i % 2 == 0) {
+        assertEquals(1, table.getRecord(idList.get(i)).getValues().get(1).getInt());
+        assertEquals("abcde", table.getRecord(idList.get(i)).getValues().get(2).getString());
+      } else {
+        assertEquals(5, table.getRecord(idList.get(i)).getValues().get(1).getInt());
+        assertEquals("00005", table.getRecord(idList.get(i)).getValues().get(2).getString());
+      }
+    }
+  }
+
+  /* Test Iterator */
+  @Test
+  @Category(StudentTest.class)
+  public void testS6() throws DatabaseException {
+    Record input = TestUtils.createRecordWithAllTypes();
+
+    List<RecordID> idList = new ArrayList<RecordID>();
+    for (int i = 0; i < 1000; i ++) {
+      idList.add(table.addRecord(input.getValues()));
+    }
+
+    for (int i = 1; i < 1000; i += 2) {
+      table.deleteRecord(idList.get(i));
+    }
+
+    Iterator<Record> iRec = table.iterator();
+    Record temp;
+    for (int i = 0; i < 500; i++) {
+      assertTrue(iRec.hasNext());
+      temp = iRec.next();
+      assertEquals(1, temp.getValues().get(1).getInt());
+      assertEquals("abcde", temp.getValues().get(2).getString());
+    }
+    assertFalse(iRec.hasNext());
+  }
+
+  /* Test addRecord, deleteRecord, updateRecord and Iterator */
+  @Test
+  @Category(StudentTest.class)
+  public void testS7() throws DatabaseException {
+    Record input = TestUtils.createRecordWithAllTypes();
+
+    List<RecordID> idList = new ArrayList<RecordID>();
+    for (int i = 0; i < 1000; i++) {
+      idList.add(table.addRecord(input.getValues()));
+    }
+
+    for (int i = 0; i < 1000; i++) {
+      table.deleteRecord(idList.get(i));
+    }
+    Iterator<Record> iRec1 = table.iterator();
+    assertFalse(iRec1.hasNext());
+
+    Record new_input = TestUtils.createRecordWithAllTypesWithValue(5);
+    for (int i = 0; i < 500; i++) {
+      table.addRecord(new_input.getValues());
+    }
+
+    for (int i = 1; i < 500; i += 2) {
+      table.updateRecord(input.getValues(), idList.get(i));
+    }
+
+    Iterator<Record> iRec2 = table.iterator();
+    Record temp;
+    for (int i = 0; i < 500; i++) {
+      assertTrue(iRec2.hasNext());
+      temp = iRec2.next();
+      if (i % 2 == 0) {
+        assertEquals(5, temp.getValues().get(1).getInt());
+        assertEquals("00005", temp.getValues().get(2).getString());
+      } else {
+        assertEquals(1, temp.getValues().get(1).getInt());
+        assertEquals("abcde", temp.getValues().get(2).getString());
+      }
+    }
+    assertFalse(iRec2.hasNext());
+  }
+
+  /* Test getRecord and Iterator */
+  @Test
+  @Category(StudentTest.class)
+  public void testS8() throws DatabaseException {
+    Record input = TestUtils.createRecordWithAllTypes();
+
+    List<RecordID> idList = new ArrayList<RecordID>();
+    for (int i = 0; i < 1000; i++) {
+      idList.add(table.addRecord(input.getValues()));
+    }
+
+    for (int i = 0; i < 500; i++) {
+      table.deleteRecord(idList.get(i));
+    }
+
+    Iterator<Record> iRec = table.iterator();
+    Record temp1, temp2;
+    for (int i = 0; i < 500; i++) {
+      assertTrue(iRec.hasNext());
+      temp1 = iRec.next();
+      temp2 = table.getRecord(idList.get(i + 500));
+
+      assertEquals(temp1.getValues().get(1).getInt(), temp2.getValues().get(1).getInt());
+      assertEquals(temp1.getValues().get(2).getString(), temp2.getValues().get(2).getString());
+    }
+    assertFalse(iRec.hasNext());
+  }
+
+  /* Test updateRecord and Iterator */
+  @Test
+  @Category(StudentTest.class)
+  public void testS9() throws DatabaseException {
+    Record input = TestUtils.createRecordWithAllTypes();
+
+    List<RecordID> idList = new ArrayList<RecordID>();
+    for (int i = 0; i < 1000; i++) {
+      idList.add(table.addRecord(input.getValues()));
+    }
+
+    Record new_input = TestUtils.createRecordWithAllTypesWithValue(5);
+    for (int i = 0; i < 1000; i++) {
+      table.updateRecord(new_input.getValues(), idList.get(i));
+    }
+
+    Iterator<Record> iRec = table.iterator();
+    Record temp;
+    for (int i = 0; i < 1000; i++) {
+      assertTrue(iRec.hasNext());
+      temp = iRec.next();
+      assertEquals(5, temp.getValues().get(1).getInt());
+      assertEquals("00005", temp.getValues().get(2).getString());
+    }
+    assertFalse(iRec.hasNext());
+  }
+
+  /* Test deleteRecord and Iterator */
+  @Test
+  @Category(StudentTest.class)
+  public void testS10() throws DatabaseException {
+    Record input = TestUtils.createRecordWithAllTypes();
+
+    List<RecordID> idList = new ArrayList<RecordID>();
+    for (int i = 0; i < 1000; i++) {
+      idList.add(table.addRecord(input.getValues()));
+    }
+
+    for (int i = 0; i < 500; i++) {
+      table.deleteRecord(idList.get(i));
+    }
+
+    Record new_input = TestUtils.createRecordWithAllTypesWithValue(5);
+    for (int i = 500; i < 750; i++) {
+      table.updateRecord(new_input.getValues(), idList.get(i));
+    }
+
+    Iterator<Record> iRec = table.iterator();
+    Record temp;
+    for (int i = 0; i < 250; i++) {
+      assertTrue(iRec.hasNext());
+      temp = iRec.next();
+      assertEquals(5, temp.getValues().get(1).getInt());
+      assertEquals("00005", temp.getValues().get(2).getString());
+    }
+    assertTrue(iRec.hasNext());
+
+    for (int i = 250; i < 500; i++) {
+      assertTrue(iRec.hasNext());
+      temp = iRec.next();
+      assertEquals(1, temp.getValues().get(1).getInt());
+      assertEquals("abcde", temp.getValues().get(2).getString());
+    }
+    assertFalse(iRec.hasNext());
+  }
 }
