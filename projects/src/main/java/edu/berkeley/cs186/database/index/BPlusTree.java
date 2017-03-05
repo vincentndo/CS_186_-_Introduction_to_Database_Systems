@@ -129,6 +129,34 @@ public class BPlusTree {
      */
     public void insertKey(DataBox key, RecordID rid) {
         // Implement me!
+        BPlusNode root = BPlusNode.getBPlusNode(this, rootPageNum);
+        List<BEntry> allEntries_original = root.getAllValidEntries();
+        LeafEntry newbie = new LeafEntry(key, rid);
+        InnerEntry newRootEntry = root.insertBEntry(newbie);
+
+        if (newRootEntry != null) {
+//            if (root.isLeaf()) {
+//
+//            }
+//            if (root.hasSpace()) {
+//
+//                List<BEntry> allEntries = root.getAllValidEntries();
+//                allEntries.add(newRootEntry);
+//                Collections.sort(allEntries);
+//                root.overwriteBNodeEntries(allEntries);
+//
+//            } else {
+
+//                incrementNumNodes();
+                InnerNode newRoot= new InnerNode(this);
+                newRoot.setFirstChild(root.getPageNum());
+                List<BEntry> newRootEntries = new ArrayList<BEntry>(1);
+                newRootEntries.add(newRootEntry);
+                newRoot.overwriteBNodeEntries(newRootEntries);
+                updateRoot(newRoot.getPageNum());
+
+//            }
+        }
     }
 
     /**
@@ -229,6 +257,35 @@ public class BPlusTree {
      */
     private class BPlusIterator implements Iterator<RecordID> {
         // Implement me!
+        private class Pair {
+            private BPlusNode node;
+            private int pos;
+
+            public Pair(BPlusNode node, int pos) {
+                this.node = node;
+                this.pos = pos;
+            }
+
+            public BPlusNode getNode () {
+                return node;
+            }
+
+            public void setNode(BPlusNode node) {
+                this.node = node;
+            }
+
+            public int getPos() {
+                return pos;
+            }
+
+            public void setPos(int pos) {
+                this.pos = pos;
+            }
+        }
+
+        private Stack<Pair> nodeStack = new Stack<Pair>();
+        private DataBox key = null;
+        private boolean scan = true;
 
         /**
          * Construct an iterator that performs a sorted scan on this BPlusTree
@@ -240,6 +297,19 @@ public class BPlusTree {
          */
         public BPlusIterator(BPlusNode root) {
             // Implement me!
+            Pair rootPair = new Pair(root, 0);
+            this.nodeStack.push(rootPair);
+
+            while (!root.isLeaf()) {
+
+                InnerNode rootNode = (InnerNode) root;
+                BPlusNode childNode = BPlusNode.getBPlusNode(root.getTree(), rootNode.getFirstChild());
+
+                Pair childNodePair = new Pair(childNode, 0);
+
+                this.nodeStack.push(childNodePair);
+                root = childNode;
+            }
         }
 
         /**
@@ -256,6 +326,9 @@ public class BPlusTree {
          */
         public BPlusIterator(BPlusNode root, DataBox key, boolean scan) {
             // Implement me!
+            this(root);
+            this.key = key;
+            this.scan = scan;
         }
 
         /**
@@ -266,7 +339,89 @@ public class BPlusTree {
          */
         public boolean hasNext() {
             // Implement me!
-            return false;
+            boolean ret = false;
+
+            if (nodeStack.isEmpty()) {
+                return ret;
+            }
+
+            BPlusNode node;
+            int pos;
+            List<BEntry> allEntries;
+
+            for (Pair nodePair : nodeStack) {
+
+                node = nodePair.getNode();
+                pos = nodePair.getPos();
+                allEntries = node.getAllValidEntries();
+
+                if (!node.isLeaf()) {
+                    if (pos < allEntries.size()) {
+                        ret = true;
+                        return ret;
+                    }
+                } else {
+                    if (pos < allEntries.size()) {
+                        ret = true;
+                        return ret;
+                    }
+                }
+            }
+            return ret;
+        }
+
+        private void advance () {
+
+            if (nodeStack.isEmpty()) {
+                return;
+            }
+
+            Pair nodePair = nodeStack.pop();
+            BPlusNode node = nodePair.getNode();
+            int pos = nodePair.getPos();
+            List<BEntry> allEntries = node.getAllValidEntries();
+
+            if (node.isLeaf() && pos < allEntries.size() - 1) {
+
+                pos += 1;
+                nodePair.setPos(pos);
+                this.nodeStack.push(nodePair);
+
+//                DataBox key = allEntries.get(pos).getKey();
+                if (!scan) {
+                    if (this.key.compareTo(allEntries.get(pos).getKey()) != 0) {
+                        advance();
+                    }
+                }
+
+            } else if (node.isLeaf() && pos == allEntries.size() - 1) {
+                advance();
+            } else if (!node.isLeaf() && pos < allEntries.size()) {
+                pos += 1;
+                nodePair.setPos(pos);
+                this.nodeStack.push(nodePair);
+
+                while (!node.isLeaf()) {
+                    InnerNode innerNode = (InnerNode) node;
+                    List<BEntry> allInnerEntries = innerNode.getAllValidEntries();
+                    BPlusNode childNode = BPlusNode.getBPlusNode(node.getTree(), allInnerEntries.get(pos - 1).getPageNum());
+
+                    Pair childNodePair = new Pair(childNode, 0);
+
+                    this.nodeStack.push(childNodePair);
+                    node = childNode;
+                }
+
+                allEntries = node.getAllValidEntries();
+//                DataBox key = allEntries.get(pos).getKey();
+                if (!scan) {
+                    if (this.key.compareTo(allEntries.get(pos).getKey()) != 0) {
+                        advance();
+                    }
+                }
+            } else {
+                advance();
+            }
         }
 
         /**
@@ -278,7 +433,35 @@ public class BPlusTree {
          */
         public RecordID next() {
             // Implement me!
-            return null;
+            if (hasNext()) {
+
+                Pair leafNodePair = nodeStack.peek();
+                LeafNode leafNode = (LeafNode) leafNodePair.getNode();
+                int pos = leafNodePair.getPos();
+                List<BEntry> allEntries = leafNode.getAllValidEntries();
+                DataBox key = allEntries.get(pos).getKey();
+                RecordID rid = allEntries.get(pos).getRecordID();
+                advance();
+
+                if (this.key != null) {
+                    if (this.key.compareTo(key) > 0) {
+                        return this.next();
+                    } else if (this.key.compareTo(key) == 0){
+                        return rid;
+                    } else {
+                        if (scan) {
+                            return rid;
+                        } else {
+                            return this.next();
+                        }
+                    }
+                } else {
+                    return rid;
+                }
+
+            } else {
+                throw new NoSuchElementException("The End of the World!");
+            }
         }
 
         public void remove() {

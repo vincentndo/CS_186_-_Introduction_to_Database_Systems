@@ -4,6 +4,7 @@ import edu.berkeley.cs186.database.databox.DataBox;
 import edu.berkeley.cs186.database.io.Page;
 import edu.berkeley.cs186.database.table.RecordID;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -73,7 +74,35 @@ public class InnerNode extends BPlusNode {
      */
     public InnerEntry insertBEntry(LeafEntry ent) {
         // Implement me!
-        return null;
+        List<BEntry> allEntries = this.getAllValidEntries();
+        int child = this.getFirstChild();
+
+        for (BEntry entry : allEntries) {
+            DataBox key = entry.getKey();
+            if (ent.getKey().compareTo(key) >= 0) {
+                child = entry.getPageNum();
+            } else {
+                break;
+            }
+        }
+
+        BPlusNode node = BPlusNode.getBPlusNode(getTree(), child);
+        InnerEntry ret = node.insertBEntry(ent);
+
+        if (ret != null) {
+            if (this.hasSpace()) {
+
+                allEntries.add(ret);
+                Collections.sort(allEntries);
+                this.overwriteBNodeEntries(allEntries);
+                ret = null;
+
+            } else {
+                ret = splitNode(ret);
+            }
+        }
+
+        return ret;
     }
 
     /**
@@ -89,6 +118,30 @@ public class InnerNode extends BPlusNode {
     @Override
     public InnerEntry splitNode(BEntry newEntry) {
         // Implement me!
-        return null;
+        List<BEntry> allEntries = this.getAllValidEntries();
+        int n = numEntries;
+        allEntries.add(newEntry);
+        Collections.sort(allEntries);
+        int d = n / 2;
+
+        List<BEntry> leftLeafEntries = new ArrayList<BEntry>(d);
+        List<BEntry> rightLeafEntries = new ArrayList<BEntry>(n - d);
+        InnerNode newInner = new InnerNode(getTree());
+        int newPageNum = newInner.getPageNum();
+
+        for (int i = 0; i < allEntries.size(); i++) {
+            if (i < d) {
+                leftLeafEntries.add(allEntries.get(i));
+            } else if (i > d) {
+                rightLeafEntries.add(allEntries.get(i));
+            }
+        }
+
+        this.overwriteBNodeEntries(leftLeafEntries);
+        newInner.overwriteBNodeEntries(rightLeafEntries);
+
+        InnerEntry ret = new InnerEntry(allEntries.get(d).getKey(), newPageNum);
+
+        return ret;
     }
 }
