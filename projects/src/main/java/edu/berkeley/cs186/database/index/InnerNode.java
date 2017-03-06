@@ -77,6 +77,25 @@ public class InnerNode extends BPlusNode {
         List<BEntry> allEntries = this.getAllValidEntries();
         int child = this.getFirstChild();
 
+//        int size = allEntries.size();
+//        int i;
+//        for (i = 0; i < size; i++) {
+//            BEntry entry = allEntries.get(i);
+//            DataBox key = entry.getKey();
+//            if (ent.getKey().compareTo(key) == 0) {
+//                break;
+//            } else if (ent.getKey().compareTo(key) > 0) {
+//                i += 1;
+//                break;
+//            }
+//        }
+//
+//        if (i == 0) {
+//            child = this.getFirstChild();
+//        } else {
+//            child = allEntries.get(i - 1).getPageNum();
+//        }
+
         for (BEntry entry : allEntries) {
             DataBox key = entry.getKey();
             if (ent.getKey().compareTo(key) >= 0) {

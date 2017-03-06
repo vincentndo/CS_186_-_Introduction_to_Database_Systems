@@ -364,6 +364,28 @@ public class BPlusTree {
 
             }
             this.hasNext = hasNext();
+
+            if (!scan) {
+                while (!root.isLeaf()) {
+
+                    InnerNode rootNode = (InnerNode) root;
+                    allEntries = rootNode.getAllValidEntries();
+                    size = allEntries.size();
+                    BPlusNode childNode = BPlusNode.getBPlusNode(root.getTree(), allEntries.get(size - 1).getPageNum());
+                    root = childNode;
+
+                }
+
+                allEntries = root.getAllValidEntries();
+                size = allEntries.size();
+                BEntry entry = allEntries.get(size - 1);
+                DataBox box = entry.getKey();
+
+                if (box.compareTo(key) < 0) {
+                    advance();
+                    this.hasNext = hasNext();
+                }
+            }
         }
 
         /**
