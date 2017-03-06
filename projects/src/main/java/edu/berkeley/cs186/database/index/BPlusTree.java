@@ -405,16 +405,9 @@ public class BPlusTree {
                 pos = nodePair.getPos();
                 allEntries = node.getAllValidEntries();
 
-                if (!node.isLeaf()) {
-                    if (pos < allEntries.size()) {
-                        ret = true;
-                        return ret;
-                    }
-                } else {
-                    if (pos < allEntries.size()) {
-                        ret = true;
-                        return ret;
-                    }
+                if (pos < allEntries.size()) {
+                    ret = true;
+                    return ret;
                 }
             }
             return ret;
@@ -453,7 +446,8 @@ public class BPlusTree {
                 while (!node.isLeaf()) {
                     InnerNode innerNode = (InnerNode) node;
                     List<BEntry> allInnerEntries = innerNode.getAllValidEntries();
-                    BPlusNode childNode = BPlusNode.getBPlusNode(node.getTree(), allInnerEntries.get(pos - 1).getPageNum());
+                    int pageNum = allInnerEntries.get(pos - 1).getPageNum();
+                    BPlusNode childNode = BPlusNode.getBPlusNode(node.getTree(), pageNum);
 
                     Pair childNodePair = new Pair(childNode, 0);
 
