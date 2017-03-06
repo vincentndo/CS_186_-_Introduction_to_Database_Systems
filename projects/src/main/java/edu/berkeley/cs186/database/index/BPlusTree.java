@@ -130,7 +130,6 @@ public class BPlusTree {
     public void insertKey(DataBox key, RecordID rid) {
         // Implement me!
         BPlusNode root = BPlusNode.getBPlusNode(this, rootPageNum);
-        List<BEntry> allEntries_original = root.getAllValidEntries();
         LeafEntry newbie = new LeafEntry(key, rid);
         InnerEntry newRootEntry = root.insertBEntry(newbie);
 
@@ -273,6 +272,7 @@ public class BPlusTree {
         private Stack<Pair> nodeStack = new Stack<Pair>();
         private DataBox key = null;
         private boolean scan = true;
+        public boolean hasNext;
 
         /**
          * Construct an iterator that performs a sorted scan on this BPlusTree
@@ -297,6 +297,7 @@ public class BPlusTree {
                 this.nodeStack.push(childNodePair);
                 root = childNode;
             }
+            this.hasNext = hasNext();
         }
 
         /**
@@ -362,6 +363,7 @@ public class BPlusTree {
                 this.nodeStack.push(rootPair);
 
             }
+            this.hasNext = hasNext();
         }
 
         /**
@@ -372,10 +374,10 @@ public class BPlusTree {
          */
         public boolean hasNext() {
             // Implement me!
-            boolean ret = false;
 
             if (nodeStack.isEmpty()) {
-                return ret;
+                this.hasNext = false;
+                return false;
             }
 
             BPlusNode node;
@@ -389,12 +391,14 @@ public class BPlusTree {
                 allEntries = node.getAllValidEntries();
 
                 if (pos == allEntries.size()) {
-                    return ret;
+                    this.hasNext = false;
+                    return false;
                 } else {
                     DataBox key = allEntries.get(pos).getKey();
 
                     if (this.key.compareTo(key) < 0) {
-                        return ret;
+                        this.hasNext = false;
+                        return false;
                     }
                 }
             }
@@ -406,11 +410,12 @@ public class BPlusTree {
                 allEntries = node.getAllValidEntries();
 
                 if (pos < allEntries.size()) {
-                    ret = true;
-                    return ret;
+                    this.hasNext = true;
+                    return true;
                 }
             }
-            return ret;
+            this.hasNext = false;
+            return false;
         }
 
         private void advance () {
@@ -476,7 +481,7 @@ public class BPlusTree {
          */
         public RecordID next() {
             // Implement me!
-            if (hasNext()) {
+            if (this.hasNext) {
 
                 Pair leafNodePair = nodeStack.peek();
                 LeafNode leafNode = (LeafNode) leafNodePair.getNode();
