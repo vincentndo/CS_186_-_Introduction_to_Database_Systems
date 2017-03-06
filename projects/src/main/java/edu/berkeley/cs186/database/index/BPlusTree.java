@@ -135,19 +135,7 @@ public class BPlusTree {
         InnerEntry newRootEntry = root.insertBEntry(newbie);
 
         if (newRootEntry != null) {
-//            if (root.isLeaf()) {
-//
-//            }
-//            if (root.hasSpace()) {
-//
-//                List<BEntry> allEntries = root.getAllValidEntries();
-//                allEntries.add(newRootEntry);
-//                Collections.sort(allEntries);
-//                root.overwriteBNodeEntries(allEntries);
-//
-//            } else {
 
-//                incrementNumNodes();
                 InnerNode newRoot= new InnerNode(this);
                 newRoot.setFirstChild(root.getPageNum());
                 List<BEntry> newRootEntries = new ArrayList<BEntry>(1);
@@ -155,7 +143,6 @@ public class BPlusTree {
                 newRoot.overwriteBNodeEntries(newRootEntries);
                 updateRoot(newRoot.getPageNum());
 
-//            }
         }
     }
 
@@ -326,9 +313,55 @@ public class BPlusTree {
          */
         public BPlusIterator(BPlusNode root, DataBox key, boolean scan) {
             // Implement me!
-            this(root);
             this.key = key;
             this.scan = scan;
+
+            int p;
+            List<BEntry> allEntries = root.getAllValidEntries();
+            int size = allEntries.size();
+
+            for (p = 0; p < size; p++) {
+                if (allEntries.get(p).getKey().compareTo(key) >= 0) {
+                    break;
+                }
+            }
+            Pair rootPair = new Pair(root, p);
+            this.nodeStack.push(rootPair);
+
+            while (!root.isLeaf()) {
+
+                InnerNode rootNode = (InnerNode) root;
+                BPlusNode childNode;
+                if (rootPair.getPos() == 0) {
+                    childNode = BPlusNode.getBPlusNode(root.getTree(), rootNode.getFirstChild());
+                } else {
+                    int pageNum = root.getAllValidEntries().get(rootPair.getPos() - 1).getPageNum();
+                    childNode = BPlusNode.getBPlusNode(root.getTree(), pageNum);
+                }
+
+                allEntries = childNode.getAllValidEntries();
+                size = allEntries.size();
+                root = childNode;
+
+                if (!childNode.isLeaf()) {
+                    for (p = 0; p <= size; p++) {
+                        if (allEntries.get(p).getKey().compareTo(key) >= 0) {
+                            break;
+                        }
+                    }
+                    rootPair = new Pair(childNode, p);
+                } else {
+                    for (p = 0; p < size; p++) {
+                        if (allEntries.get(p).getKey().compareTo(key) >= 0) {
+                            break;
+                        }
+                    }
+                    rootPair = new Pair(childNode, Math.min(p, size - 1));
+                }
+
+                this.nodeStack.push(rootPair);
+
+            }
         }
 
         /**
@@ -348,6 +381,23 @@ public class BPlusTree {
             BPlusNode node;
             int pos;
             List<BEntry> allEntries;
+
+            if (!scan) {
+                Pair nodePair = nodeStack.peek();
+                node = nodePair.getNode();
+                pos = nodePair.getPos();
+                allEntries = node.getAllValidEntries();
+
+                if (pos == allEntries.size()) {
+                    return ret;
+                } else {
+                    DataBox key = allEntries.get(pos).getKey();
+
+                    if (this.key.compareTo(key) < 0) {
+                        return ret;
+                    }
+                }
+            }
 
             for (Pair nodePair : nodeStack) {
 
@@ -388,12 +438,11 @@ public class BPlusTree {
                 this.nodeStack.push(nodePair);
 
 //                DataBox key = allEntries.get(pos).getKey();
-                if (!scan) {
-                    if (this.key.compareTo(allEntries.get(pos).getKey()) != 0) {
-                        advance();
-                    }
-                }
-
+//                if (!scan) {
+//                    if (this.key.compareTo(key) != 0) {
+//                        advance();
+//                    }
+//                }
             } else if (node.isLeaf() && pos == allEntries.size() - 1) {
                 advance();
             } else if (!node.isLeaf() && pos < allEntries.size()) {
@@ -412,13 +461,13 @@ public class BPlusTree {
                     node = childNode;
                 }
 
-                allEntries = node.getAllValidEntries();
+//                allEntries = node.getAllValidEntries();
 //                DataBox key = allEntries.get(pos).getKey();
-                if (!scan) {
-                    if (this.key.compareTo(allEntries.get(pos).getKey()) != 0) {
-                        advance();
-                    }
-                }
+//                if (!scan) {
+//                    if (this.key.compareTo(key) != 0) {
+//                        advance();
+//                    }
+//                }
             } else {
                 advance();
             }

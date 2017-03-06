@@ -129,7 +129,7 @@ public class InnerNode extends BPlusNode {
         InnerNode newInner = new InnerNode(getTree());
         int newPageNum = newInner.getPageNum();
 
-        for (int i = 0; i < allEntries.size(); i++) {
+        for (int i = 0; i < n + 1; i++) {
             if (i < d) {
                 leftLeafEntries.add(allEntries.get(i));
             } else if (i > d) {
@@ -140,6 +140,7 @@ public class InnerNode extends BPlusNode {
         this.overwriteBNodeEntries(leftLeafEntries);
         newInner.overwriteBNodeEntries(rightLeafEntries);
 
+        newInner.setFirstChild(allEntries.get(d).getPageNum());
         InnerEntry ret = new InnerEntry(allEntries.get(d).getKey(), newPageNum);
 
         return ret;
